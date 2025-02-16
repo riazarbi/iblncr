@@ -1,0 +1,27 @@
+name: sample_portfolio
+description: create from function
+cash:
+  percent: 5
+positions:
+- symbol: AAPL
+  exchange: SMART
+  currency: USD
+  percent: 30
+- symbol: GOOG
+  exchange: SMART
+  currency: USD
+  percent: 30
+- symbol: VT
+  exchange: SMART
+  currency: USD
+  percent: 30
+- symbol: TSLA
+  exchange: SMART
+  currency: USD
+  percent: 5
+tolerance:
+  percent: 5
+cooldown:
+  days: 365
+created_at: 2022-10-24T11:22:01
+updated_at: 2022-10-24T11:22:01
