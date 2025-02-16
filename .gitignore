@@ -1,0 +1,3 @@
+supervisord.log
+supervisord.pid
+.env
