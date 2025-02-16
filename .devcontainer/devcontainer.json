@@ -1,0 +1,22 @@
+{
+	"name": "Manually built image",
+
+	"build": {
+		"dockerfile": "../Dockerfile",
+		"context": ".."
+	  },
+
+	"customizations": {
+		"vscode": {
+		  "extensions": ["donjayamanne.python-extension-pack", "mhutchie.git-graph"]
+		}
+	  },
+
+    "postStartCommand": "bash /home/broker/runscript.sh /opt/ibc/gatewaystart.sh -inline",
+
+	"workspaceMount": "source=${localWorkspaceFolder},target=/home/broker/iblncr,type=bind",
+	"workspaceFolder": "/home/broker/iblncr",
+
+	"runArgs": ["--env-file",".env"]
+
+}
