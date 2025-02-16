@@ -16,8 +16,6 @@ TODO
 
 The Interactive Brokers API _only_ works with a locally installed, working Trader Workstatation or IB Gateway application. This project installs the IB Gateway inside a docker image and makes use of environment variables to log in and establish a connection. The python package then uses the ib_async python library to interact with the API.
 
-The 
-
 From the bottom of the stack to the top:
 
 - A base IB headless docker image from [riazarbi/ib-headless](https://github.com/riazarbi/ib-headless)
