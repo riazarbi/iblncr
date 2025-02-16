@@ -21,4 +21,4 @@ From the bottom of the stack to the top:
 - A base IB headless docker image from [riazarbi/ib-headless](https://github.com/riazarbi/ib-headless)
 - Interactive Brokers [IB Gateway](https://www.interactivebrokers.com/en/trading/ibgateway-stable.php)
 - [IBController](https://github.com/ib-controller/ib-controller) to automate Gateway launch and login
-- [ib-async] for interacting with the running Gateway
+- [ib-async](https://github.com/ib-api-reloaded/ib_async) for interacting with the running Gateway
