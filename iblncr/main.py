@@ -59,7 +59,6 @@ def plot_rebalance_history(rebalance_history):
 
         mask = rebalance_history['identifier'] == identifier
         data = rebalance_history[mask]
-        print(data)
 
         fig.set_x_limits(min_=0, max_=1+float(data['run'].max()))
         fig.set_y_limits(min_=0, max_=10+max(float(data['percent_held'].max()),float(data['percent_target'].max())))
