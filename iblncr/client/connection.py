@@ -24,9 +24,9 @@ def ib_connect(host: str = "127.0.0.1", port: int = 4003, client_id: int = 1,
         - Market data type is set to delayed frozen data (type 3)
     """
     ib = IB()
-    ib.connect(host, port, client_id)  # Connect first without account
     
     if account is None:
+        ib.connect(host, port, client_id)  # Connect first without account
         managed_accounts = ib.managedAccounts()
         if managed_accounts:
             ib.disconnect()
