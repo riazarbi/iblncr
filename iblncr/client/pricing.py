@@ -196,6 +196,7 @@ def solve_portfolio(portfolio_priced):
     cash['optimal_value'] = post_rebalancing_cash_balance
 
     positions = positions[['conid', 'percent_held', 'percent_target', 'position', 'position_target', 'percent_deviation', 'price', 'optimal_order', 'optimal_order_value', 'out_of_band']]
+    cash = cash[['currency', 'percent_held', 'percent_target', 'position', 'position_target', 'percent_deviation', 'price', 'optimal_value', 'out_of_band']]
 
     portfolio_priced['cash'] = cash
     portfolio_priced['positions'] = positions
