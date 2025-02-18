@@ -28,14 +28,14 @@ def ib_connect(host: str = "127.0.0.1", port: int = 4003, client_id: int = 1,
     if account is None:
         ib.connect(host, port, client_id)  # Connect first without account
         managed_accounts = ib.managedAccounts()
+        ib.disconnect()
         if managed_accounts:
-            ib.disconnect()
             raise ValueError(
                 "Account ID not specified. Please specify one of the following "
                 f"accounts: {managed_accounts}")
     
     # Reconnect with the specified account if we get here
-    ib.connect(host, port, client_id, account)
+    ib.connect(host = host, port = port, clientId = client_id, account = account)
     ib.reqMarketDataType(3)
     return ib
 

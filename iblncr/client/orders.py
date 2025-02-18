@@ -11,7 +11,8 @@ def constrain_orders(portfolio_solved,
                     min_order_size = 1000,
                     max_order_size = 10000,
                     buy_only = False,
-                    port: int = 4003):
+                    port: int = 4003,
+                    account: str = None):
     """Constrain rebalancing orders based on volume and size limits.
 
     Args:
@@ -39,8 +40,8 @@ def constrain_orders(portfolio_solved,
     positions = portfolio_solved['positions']
 
     # Append median historical volumes
-    conids = portfolio_targets["positions"]["conid"].tolist()
-    volumes = get_median_daily_volume(conids, days = 10, port = port)
+    conids = portfolio_solved["positions"]["conid"].tolist()
+    volumes = get_median_daily_volume(conids, days = 10, port = port, account = account)
     positions = pd.merge(positions, volumes, on='conid', how='left')
 
 
@@ -76,7 +77,8 @@ def constrain_orders(portfolio_solved,
 
 def price_orders(order_quantities,
                  spread_tolerance = 0.02,
-                 port: int = 4003):
+                 port: int = 4003,
+                 account: str = None):
     """Price orders using current market quotes.
 
     Gets current market quotes for the order conids and calculates limit prices
@@ -96,7 +98,7 @@ def price_orders(order_quantities,
             - limit (float): Calculated limit price (midpoint)
             - value (float): Order value (quantity * limit price)
     """
-    quotes = get_quotes(order_quantities.conid.tolist(), port = port)
+    quotes = get_quotes(order_quantities.conid.tolist(), port = port, account = account)
 
     quotes = quotes[~quotes[['bid_price', 'ask_price', 'bid_size', 'ask_size']].isin([-1, 0]).any(axis=1)]
 
@@ -123,7 +125,7 @@ def price_orders(order_quantities,
     return(orders)
 
 
-def submit_orders(orders, port: int = 4003):
+def submit_orders(orders, port: int = 4003, account: str = None):
     """Submit limit orders to Interactive Brokers.
 
     Creates IB contract objects from conids, qualifies them with the IB API,
@@ -141,7 +143,7 @@ def submit_orders(orders, port: int = 4003):
     Returns:
         None
     """
-    ib = ib_connect(port = port)
+    ib = ib_connect(port = port, account = account)
     contracts = [Stock(conId=i) for i in orders.conid.tolist()]
     all = ib.qualifyContracts(*contracts)    
     orders['contract'] = all
@@ -159,7 +161,7 @@ def submit_orders(orders, port: int = 4003):
     ib_disconnect(ib)
 
 
-def get_orders(port: int = 4003):
+def get_orders(port: int = 4003, account: str = None):
     """Get all open orders from Interactive Brokers.
 
     Connects to TWS/Gateway, retrieves all open orders, and disconnects.
@@ -170,13 +172,13 @@ def get_orders(port: int = 4003):
     Returns:
         list: List of open IB order objects
     """
-    ib = ib_connect(port = port)
+    ib = ib_connect(port = port, account = account)
     orders = ib.orders()
     ib_disconnect(ib)
     return orders
 
 
-def cancel_orders(port: int = 4003):
+def cancel_orders(port: int = 4003, account: str = None):
     """Cancel all open orders at Interactive Brokers.
 
     Connects to TWS/Gateway, cancels all open orders, and disconnects.
@@ -187,6 +189,6 @@ def cancel_orders(port: int = 4003):
     Returns:
         None
     """
-    ib = ib_connect(port = port)
+    ib = ib_connect(port = port, account = account)
     ib.reqGlobalCancel()
     ib_disconnect(ib)

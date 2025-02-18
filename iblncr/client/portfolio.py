@@ -3,7 +3,7 @@ import yaml
 from ib_async import Stock
 from .connection import ib_connect, ib_disconnect
 
-def get_cash(port: int = 4003):
+def get_cash(port: int = 4003, account: str = None):
     """
     Retrieves the cash balance from Interactive Brokers.
     
@@ -18,7 +18,7 @@ def get_cash(port: int = 4003):
     Note:
         This function handles the connection and disconnection to IB automatically.
     """
-    ib = ib_connect(port = port)
+    ib = ib_connect(port = port, account = account)
     cash = [x.value for x in ib.accountValues() if x.tag == "CashBalance" and x.currency == "USD"][0]
     ib_disconnect(ib)
     data = [{"currency": "USD", "position": cash}]
@@ -27,7 +27,7 @@ def get_cash(port: int = 4003):
     return df
 
 
-def get_positions(port: int = 4003):
+def get_positions(port: int = 4003, account: str = None):
     """
     Retrieves current positions from Interactive Brokers.
     
@@ -43,7 +43,7 @@ def get_positions(port: int = 4003):
     Note:
         This function handles the connection and disconnection to IB automatically.
     """
-    ib = ib_connect(port = port)
+    ib = ib_connect(port = port, account = account)
     positions = ib.positions()
     ib_disconnect(ib)
     df = pd.DataFrame([
@@ -57,7 +57,7 @@ def get_positions(port: int = 4003):
     return df
 
 
-def get_portfolio_state(port: int = 4003):
+def get_portfolio_state(port: int = 4003, account: str = None):
     """
     Retrieves the current portfolio state from Interactive Brokers, including cash and positions.
 
@@ -73,11 +73,11 @@ def get_portfolio_state(port: int = 4003):
         This function handles the connection and disconnection to IB automatically through
         its constituent functions get_cash() and get_positions().
     """
-    portfolio = {"cash": get_cash(port=port), "positions": get_positions(port=port)}
+    portfolio = {"cash": get_cash(port=port, account=account), "positions": get_positions(port=port, account=account)}
     return portfolio
 
 
-def get_portfolio_model(path, port: int = 4003):
+def get_portfolio_model(path, port: int = 4003, account: str = None):
     """
     Loads a portfolio model from a YAML file and enriches it with contract IDs from Interactive Brokers.
 
@@ -104,7 +104,7 @@ def get_portfolio_model(path, port: int = 4003):
 
     df = pd.DataFrame(portfolio_model["positions"])
     df['contract'] = df.apply(lambda row: Stock(row.symbol, row.exchange, row.currency), axis=1)    
-    ib = ib_connect(port = port)
+    ib = ib_connect(port = port, account = account)
     df['contract'] = ib.qualifyContracts(*df['contract'])
     ib_disconnect(ib)
     df['conid'] = df.apply(lambda row: row.contract.conId, axis=1)

@@ -3,7 +3,7 @@ import numpy as np
 from .connection import ib_connect, ib_disconnect
 from ib_async import Stock
 
-def get_quotes(conids, port: int = 4003):
+def get_quotes(conids, port: int = 4003, account: str = None):
     """
     Retrieves real-time market quotes for a list of contract IDs.
 
@@ -28,7 +28,7 @@ def get_quotes(conids, port: int = 4003):
         Connects to Interactive Brokers, qualifies the contracts, retrieves ticker data,
         and disconnects. Returns data in a pandas DataFrame format.
     """
-    ib = ib_connect(port = port)
+    ib = ib_connect(port = port, account = account)
     contracts = [Stock(conId=i) for i in conids]
     all = ib.qualifyContracts(*contracts)    
     tickers = [ib.reqTickers(*all)]
@@ -51,7 +51,7 @@ def get_quotes(conids, port: int = 4003):
     return df
   
   
-def get_median_daily_volume(conids, days = 10, port: int = 4003):
+def get_median_daily_volume(conids, days = 10, port: int = 4003, account: str = None):
     """
     Retrieves historical daily volume data and calculates the median daily volume for a list of contract IDs.
 
@@ -69,7 +69,7 @@ def get_median_daily_volume(conids, days = 10, port: int = 4003):
         Connects to Interactive Brokers, qualifies the contracts, retrieves historical daily
         volume data, calculates the median, and disconnects. Returns data in a pandas DataFrame format.
     """
-    ib = ib_connect(port = port)
+    ib = ib_connect(port = port, account = account)
     contracts = [Stock(conId=i) for i in conids]
     all = ib.qualifyContracts(*contracts)    
     average_volume = []
@@ -94,7 +94,7 @@ def get_median_daily_volume(conids, days = 10, port: int = 4003):
     return df
 
 
-def price_portfolio(portfolio_targets, port: int = 4003):
+def price_portfolio(portfolio_targets, port: int = 4003, account: str = None):
     """
     Prices a portfolio by getting current market prices and calculating position values and percentages.
 
@@ -123,7 +123,7 @@ def price_portfolio(portfolio_targets, port: int = 4003):
     """
     # Positions
     conids = portfolio_targets["positions"]["conid"].tolist()
-    prices = get_quotes(conids, port = port)    
+    prices = get_quotes(conids, port = port, account = account)    
     assets = pd.merge(portfolio_targets['positions'],prices, on='conid', how='left')
     assets['price'] = assets.close
     assets['value_held'] = assets.position * assets.price
