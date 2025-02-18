@@ -1,25 +1,43 @@
 from ib_async.ib import IB
 
-def ib_connect(host: str = "127.0.0.1", port: int = 4003, client_id: int = 1, account: str = None):
+def ib_connect(host: str = "127.0.0.1", port: int = 4003, client_id: int = 1,
+              account: str = None):
     """
     Establishes a connection to Interactive Brokers TWS/Gateway.
     
     Args:
-        host (str, optional): The hostname or IP address of the TWS/Gateway. Defaults to "127.0.0.1".
+        host (str, optional): The hostname or IP address of the TWS/Gateway.
+            Defaults to "127.0.0.1".
         port (int, optional): The port number to connect to. Defaults to 4003.
         client_id (int, optional): A unique client identifier. Defaults to 1.
+        account (str, optional): The account ID to use. If None, available accounts
+            will be listed.
     
     Returns:
         IB: An initialized and connected IB client instance.
+        
+    Raises:
+        ValueError: If account is not specified and multiple accounts are available.
         
     Note:
         - The connection is blocking until established
         - Market data type is set to delayed frozen data (type 3)
     """
     ib = IB()
-    ib.connect(host, port, client_id, account)  # Now a blocking call
+    ib.connect(host, port, client_id)  # Connect first without account
+    
+    if account is None:
+        managed_accounts = ib.managedAccounts()
+        if managed_accounts:
+            ib.disconnect()
+            raise ValueError(
+                "Account ID not specified. Please specify one of the following "
+                f"accounts: {managed_accounts}")
+    
+    # Reconnect with the specified account if we get here
+    ib.connect(host, port, client_id, account)
     ib.reqMarketDataType(3)
-    return(ib)
+    return ib
 
 
 def ib_disconnect(ib):
