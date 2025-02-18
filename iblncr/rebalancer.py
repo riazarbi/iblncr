@@ -21,11 +21,11 @@ from iblncr.client.orders import (
 def update_rebalance_history(portfolio_solved, rebalance_history, run):
     """Updates the rebalance history DataFrame with current portfolio state."""
     # Create combined history entry
-    positions_history = portfolio_solved['positions'][['conid', 'percent_held', 'percent_target']].copy()
+    positions_history = portfolio_solved['positions'][['conid', 'percent_held', 'percent_target', 'percent_deviation']].copy()
     positions_history['type'] = 'position'
     positions_history.rename(columns={'conid': 'identifier'}, inplace=True)
 
-    cash_history = portfolio_solved['cash'][['currency', 'percent_held', 'percent_target']].copy()
+    cash_history = portfolio_solved['cash'][['currency', 'percent_held', 'percent_target', 'percent_deviation']].copy()
     cash_history['type'] = 'cash'
     cash_history.rename(columns={'currency': 'identifier'}, inplace=True)
 
@@ -45,13 +45,13 @@ def execute_orders(orders: pd.DataFrame, account: str) -> Optional[pd.DataFrame]
     print("Submitting orders")
     submit_orders(orders, account=account)     
     
-    print("Waiting 60 seconds before canceling unfilled orders")
+    print("Waiting 60 seconds before cancelling unfilled orders")
     time.sleep(60)
 
     print("Getting filled orders")
     filled_orders = get_filled_orders(account=account)
     
-    print("Canceling remaining orders")
+    print("Cancelling remaining orders\n")
     cancel_orders(account=account)
     
     return filled_orders
@@ -69,10 +69,12 @@ def perform_rebalance(portfolio_solved: Dict[str, pd.DataFrame], account: str) -
     
     return execute_orders(orders, account)
 
+
 def plot_rebalance_progress(rebalance_history: pd.DataFrame) -> None:
     """Creates a terminal plot showing how positions track towards their targets."""
     # Get unique runs for x-axis
     runs = rebalance_history['run'].unique()
+    percent_deviations = rebalance_history['percent_deviation']
     
     # Initialize plot
     fig = plotille.Figure()
@@ -81,17 +83,19 @@ def plot_rebalance_progress(rebalance_history: pd.DataFrame) -> None:
     fig.x_label = "Run" 
     fig.y_label = "Tracking Error %"
     fig.set_x_limits(min_=0, max_=int(max(runs)+1))
-    fig.set_y_limits(min_=0)
+    fig.set_y_limits(min_=0, max_=float(percent_deviations.max()+5))
     
     # Plot each position/cash difference from target
     for identifier in rebalance_history['identifier'].unique():
         position_data = rebalance_history[rebalance_history['identifier'] == identifier]
-        differences = abs(position_data['percent_held'] - position_data['percent_target'])
-        label = f"{identifier} (target: {position_data['percent_target'].iloc[0]}%)"
-        fig.plot(position_data['run'], differences, label=label)
+        differences = position_data['percent_deviation']
+        label = f"{identifier} (deviation: {round(position_data['percent_deviation'].iloc[-1], 2)}%)"
+        fig.plot(position_data['run'], differences, label=label, interp='linear')
     
     print("\nTracking error over time (lower is better):")
     print(fig.show(legend=True))
+    print("\n")
+
 
 def run_rebalancer(account: str, model: str) -> None:
     """Main rebalancing loop."""
@@ -120,7 +124,7 @@ def run_rebalancer(account: str, model: str) -> None:
         print(f"\nPortfolio Cash:\n{portfolio_solved['cash']}")
 
         rebalance_history = update_rebalance_history(portfolio_solved, rebalance_history, run)
-        print(f"\nPosition History:\n{rebalance_history}\n")
+
         plot_rebalance_progress(rebalance_history)
 
         out_of_band = (
