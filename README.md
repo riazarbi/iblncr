@@ -1,24 +1,32 @@
 # iblncr
 
-Declarative stock portfolio management via [Interactive Brokers](https://www.interactivebrokers.com). 
-
-Currently WIP
-
-## System requirements
-
-All you need is docker or some similar docker container runtime.
+A command line tool for rebalancing a portfolio of stocks and ETFs via [Interactive Brokers](https://www.interactivebrokers.com). 
 
 ## Basic usage
 
-TODO
+The Interactive Brokers API _only_ works with a locally installed, working Trader Workstatation or IB Gateway application. If you don't have one, you can use a headless docker image to run one.
 
-## Under the hood
+```bash
+# in a separate terminal
+docker run -it --rm --name broker  -p 4003:4003 ghcr.io/riazarbi/ib-headless:10.30.1t
+```
+Install iblncr with pipx:
 
-The Interactive Brokers API _only_ works with a locally installed, working Trader Workstatation or IB Gateway application. This project installs the IB Gateway inside a docker image and makes use of environment variables to log in and establish a connection. The python package then uses the ib_async python library to interact with the API.
+```bash
+pipx install git+https://github.com/riazarbi/rblncr.git
+```
 
-From the bottom of the stack to the top:
+Once installed, you can run the application with:
 
-- A base IB headless docker image from [riazarbi/ib-headless](https://github.com/riazarbi/ib-headless)
-- Interactive Brokers [IB Gateway](https://www.interactivebrokers.com/en/trading/ibgateway-stable.php)
-- [IBController](https://github.com/ib-controller/ib-controller) to automate Gateway launch and login
-- [ib-async](https://github.com/ib-api-reloaded/ib_async) for interacting with the running Gateway
+```bash
+iblncr --account <account_number> --model <model_file> --port <port_number>
+```
+
+Argument defaults are as follows:
+
+- account: None
+- model: iblncr/data/sample_model.yaml
+- port: 4003
+
+If you don't specify an account, the application will list the available accounts given by the API and prompt you to select one.
+
