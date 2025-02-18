@@ -2,3 +2,4 @@ supervisord.log
 supervisord.pid
 .env
 iblncr/__pycache__/*
+iblncr/client/__pycache__/*
