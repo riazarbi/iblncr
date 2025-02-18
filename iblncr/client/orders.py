@@ -1,0 +1,192 @@
+import pandas as pd
+import numpy as np
+from ib_async.ib import LimitOrder
+from ib_async import Stock
+from .connection import ib_connect, ib_disconnect
+from .pricing import get_quotes, get_median_daily_volume
+
+
+def constrain_orders(portfolio_solved,
+                    daily_vol_pct_limit = 0.02,
+                    min_order_size = 1000,
+                    max_order_size = 10000,
+                    buy_only = False,
+                    port: int = 4003):
+    """Constrain rebalancing orders based on volume and size limits.
+
+    Args:
+        portfolio_solved (dict): Portfolio with rebalancing calculations from solve_portfolio()
+        daily_vol_pct_limit (float, optional): Maximum percentage of historical daily volume. Defaults to 0.02.
+        min_order_size (float, optional): Minimum order value in dollars. Defaults to 1000.
+        max_order_size (float, optional): Maximum order value in dollars. Defaults to 10000.
+        buy_only (bool, optional): Whether to only allow buy orders. Defaults to False.
+        port (int, optional): TWS/Gateway port. Defaults to 4003.
+
+    Returns:
+        pd.DataFrame: Constrained orders containing:
+            - conid (int): Contract identifier
+            - order (float): Order size in shares/contracts
+            - value (float): Order value in dollars
+
+    Note:
+        Applies volume and size constraints to rebalancing orders:
+        1. Limits order size to specified percentage of historical volume
+        2. Enforces minimum and maximum order values
+        3. Optionally filters out sell orders
+        Returns only non-zero orders.
+    """
+    # extract assets and symbols
+    positions = portfolio_solved['positions']
+
+    # Append median historical volumes
+    conids = portfolio_targets["positions"]["conid"].tolist()
+    volumes = get_median_daily_volume(conids, days = 10, port = port)
+    positions = pd.merge(positions, volumes, on='conid', how='left')
+
+
+    # work out the per-symbol constraints
+    positions['volume_constraint'] = np.floor(positions.historical_volume.mul(daily_vol_pct_limit))
+    positions['max_value_constraint'] = max_order_size
+    positions['min_value_constraint'] = min_order_size
+
+    # work out the constrained trade value
+    positions['value'] = np.minimum(abs(positions.optimal_order_value), positions.max_value_constraint)
+    positions['value'] = positions['value'].where(positions['value'] > positions['min_value_constraint'], 0)
+    # work out constrained order size
+    positions['order'] = np.floor(np.minimum(positions.volume_constraint, positions.value / positions.price))
+
+    # recompute the constrained value for rounding issues
+    positions.value = positions.order * positions.price
+
+    # correct the sign for sell orders
+    positions.value = np.where(positions['optimal_order_value'] < 0, -positions['value'], positions['value'])
+    positions.order = np.where(positions['optimal_order'] < 0, -positions['order'], positions['order'])
+
+    # drop sells if buy only constraint
+    if buy_only:
+        # Apply the conditions to 'order' and 'value' columns
+        positions['order'] = np.where(positions['order'] < 0, 0, positions['order'])
+        positions['value'] = np.where(positions['value'] < 0, 0, positions['value'])
+    
+    positions = positions[(positions["order"] != 0) | (positions["value"] != 0)]
+    
+    orders = positions[['conid', 'order', 'value']]
+    return(orders)
+
+
+def price_orders(order_quantities,
+                 spread_tolerance = 0.02,
+                 port: int = 4003):
+    """Price orders using current market quotes.
+
+    Gets current market quotes for the order conids and calculates limit prices
+    at the midpoint between bid and ask. Filters out quotes with invalid or
+    missing prices, or spreads wider than the tolerance.
+
+    Args:
+        order_quantities (DataFrame): DataFrame containing order quantities with columns:
+            - conid (int): Contract identifier
+            - order (float): Order size in shares/contracts
+        spread_tolerance (float, optional): Maximum allowable bid-ask spread as a 
+            percentage of ask price. Defaults to 0.02 (2%).
+        port (int, optional): TWS/Gateway port number. Defaults to 4003.
+
+    Returns:
+        DataFrame: Original order quantities with added columns:
+            - limit (float): Calculated limit price (midpoint)
+            - value (float): Order value (quantity * limit price)
+    """
+    quotes = get_quotes(order_quantities.conid.tolist(), port = port)
+
+    quotes = quotes[~quotes[['bid_price', 'ask_price', 'bid_size', 'ask_size']].isin([-1, 0]).any(axis=1)]
+
+    # Drop rows where any of the specified columns are NA (if needed)
+    quotes = quotes.dropna(subset=['bid_price', 'ask_price', 'bid_size', 'ask_size'])
+
+    # Check if DataFrame is not empty, calculate spread and filter based on condition
+    if len(quotes) > 0:
+        quotes['spread'] = (quotes['ask_price'] - quotes['bid_price']) / quotes['ask_price']
+        quotes = quotes[quotes['spread'] < spread_tolerance]
+
+    # Check if quotes DataFrame is not empty
+    if len(quotes) > 0:
+        quotes['limit'] = (quotes['ask_price'] + quotes['bid_price']) / 2
+        quotes = quotes[['conid', 'limit']]  # Select only 'symbol' and 'limit'
+    else:
+        quotes = order_quantities[['conid']]  # Select only 'symbol'
+        quotes['limit'] = np.nan  # Add 'limit' column with NA (NaN)
+
+    orders = pd.merge(order_quantities, quotes, on='conid', how='left')
+    orders.limit = round(orders.limit, 2)
+    orders['value'] = orders.order * orders.limit
+    
+    return(orders)
+
+
+def submit_orders(orders, port: int = 4003):
+    """Submit limit orders to Interactive Brokers.
+
+    Creates IB contract objects from conids, qualifies them with the IB API,
+    and submits limit orders based on the calculated prices and quantities.
+    Buy orders are created for positive values, sell orders for negative values.
+
+    Args:
+        orders (DataFrame): DataFrame containing order details with columns:
+            - conid (int): Contract identifier
+            - order (float): Order size in shares/contracts 
+            - limit (float): Limit price
+            - value (float): Order value (quantity * limit price)
+        port (int, optional): TWS/Gateway port number. Defaults to 4003.
+
+    Returns:
+        None
+    """
+    ib = ib_connect(port = port)
+    contracts = [Stock(conId=i) for i in orders.conid.tolist()]
+    all = ib.qualifyContracts(*contracts)    
+    orders['contract'] = all
+
+    orders['ib_order'] = orders.apply(lambda row: LimitOrder('SELL' if row['value'] < 0 else 'BUY', 
+                                              abs(row['order']), row['limit']), axis=1)
+
+    submissions = []
+    for _, row in orders.iterrows():
+        contract = row['contract']
+        order = row['ib_order']
+        trade = ib.placeOrder(contract, order)
+        submissions.append(trade)
+        
+    ib_disconnect(ib)
+
+
+def get_orders(port: int = 4003):
+    """Get all open orders from Interactive Brokers.
+
+    Connects to TWS/Gateway, retrieves all open orders, and disconnects.
+
+    Args:
+        port (int, optional): TWS/Gateway port number. Defaults to 4003.
+
+    Returns:
+        list: List of open IB order objects
+    """
+    ib = ib_connect(port = port)
+    orders = ib.orders()
+    ib_disconnect(ib)
+    return orders
+
+
+def cancel_orders(port: int = 4003):
+    """Cancel all open orders at Interactive Brokers.
+
+    Connects to TWS/Gateway, cancels all open orders, and disconnects.
+
+    Args:
+        port (int, optional): TWS/Gateway port number. Defaults to 4003.
+
+    Returns:
+        None
+    """
+    ib = ib_connect(port = port)
+    ib.reqGlobalCancel()
+    ib_disconnect(ib)
