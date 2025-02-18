@@ -9,7 +9,8 @@ from iblncr.client.orders import (
     constrain_orders,
     price_orders,
     submit_orders,
-    cancel_orders
+    cancel_orders,
+    get_filled_orders
 )
 from iblncr.client.connection import ib_connect
 
@@ -17,57 +18,64 @@ def main(account: str):
     print(f"=> Starting portfolio rebalancing for account {account}")
     
     try:
-        print("=> Loading portfolio model from iblncr/data/sample_model.yaml")
-        portfolio_model = get_portfolio_model("iblncr/data/sample_model.yaml", account=account)
+        out_of_band = True
         
-        print("=> Fetching current portfolio state")
-        portfolio_state = get_portfolio_state(account=account)
-        
-        print("=> Calculating portfolio targets")
-        portfolio_targets = load_portfolio_targets(portfolio_state, portfolio_model)
+        while out_of_band:
+            print("=> Loading portfolio model from iblncr/data/sample_model.yaml")
+            portfolio_model = get_portfolio_model("iblncr/data/sample_model.yaml", account=account)
+            
+            print("=> Fetching current portfolio state")
+            portfolio_state = get_portfolio_state(account=account)
 
-        print("=> Pricing portfolio")
-        portfolio_priced = price_portfolio(portfolio_targets, account=account)
-                
-        print("=> Solving portfolio optimization")
-        portfolio_solved = solve_portfolio(portfolio_priced)
+            print("=> Calculating portfolio targets")
+            portfolio_targets = load_portfolio_targets(portfolio_state, portfolio_model)
 
-        print("\nPortfolio Positions:")
-        print(portfolio_solved['positions'])
-        print("\nPortfolio Cash:")
-        print(portfolio_solved['cash'])
-        print("\n")
+            print("=> Pricing portfolio")
+            portfolio_priced = price_portfolio(portfolio_targets, account=account)
 
-        out_of_band = (
-            any(portfolio_solved['cash'].out_of_band) or
-            any(portfolio_solved['positions'].out_of_band)
-        )
+            print("=> Solving portfolio optimization")
+            portfolio_solved = solve_portfolio(portfolio_priced)
 
-        if out_of_band:
-            print("=> Portfolio is out of balance - executing trades")
-            print("=> Calculating order constraints")
-            order_quantities = constrain_orders(portfolio_solved, account=account)
-
-            print("=> Pricing orders")
-            orders = price_orders(order_quantities, account=account)
-
-            print("\nOrders:")
-            print(orders)
+            print("\nPortfolio Positions:")
+            print(portfolio_solved['positions'])
+            print("\nPortfolio Cash:")
+            print(portfolio_solved['cash'])
             print("\n")
 
-            if orders is not None:
-                print("=> Submitting orders")
-                submit_orders(orders, account=account)     
-                print("=> Waiting 30 seconds before canceling unfilled orders")
-                time.sleep(30)
+            out_of_band = (
+                any(portfolio_solved['cash'].out_of_band) or
+                any(portfolio_solved['positions'].out_of_band)
+            )
 
-                print("=> Canceling remaining orders")
-                cancel_orders(account=account)
-            else:
-                print("=> Failed to price orders.")
-                
-        else: 
-            print("=> Portfolio weights are within tolerance. Exiting")
+            if out_of_band:
+                print("=> Portfolio is out of balance - executing trades")
+                print("=> Calculating order constraints")
+                order_quantities = constrain_orders(portfolio_solved, account=account)
+
+                print("=> Pricing orders")
+                orders = price_orders(order_quantities, account=account)
+
+                print("\nOrders:")
+                print(orders)
+                print("\n")
+
+                if orders is not None:
+                    print("=> Submitting orders")
+                    submit_orders(orders, account=account)     
+                    print("=> Waiting 30 seconds before canceling unfilled orders")
+                    time.sleep(30)
+
+                    print("=> Getting filled orders")
+                    filled_orders = get_filled_orders(account=account)
+                    print(filled_orders)
+
+                    print("=> Canceling remaining orders")
+                    cancel_orders(account=account)
+                else:
+                    print("=> Failed to price orders.")
+
+            else: 
+                print("=> Portfolio weights are within tolerance. Exiting")
 
     except Exception as e:
         print(f"ERROR: An error occurred: {str(e)}")
