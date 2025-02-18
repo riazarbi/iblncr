@@ -123,8 +123,8 @@ def price_portfolio(portfolio_targets, port: int = 4003, account: str = None):
     """
     # Positions
     conids = portfolio_targets["positions"]["conid"].tolist()
-    prices = get_quotes(conids, port = port, account = account)    
-    assets = pd.merge(portfolio_targets['positions'],prices, on='conid', how='left')
+    prices = get_quotes(conids, port=port, account=account)    
+    assets = pd.merge(portfolio_targets['positions'], prices, on='conid', how='left')
     assets['price'] = assets.close
     assets['value_held'] = assets.position * assets.price
     

@@ -56,14 +56,14 @@ def execute_orders(orders: pd.DataFrame, account: str) -> Optional[pd.DataFrame]
     
     return filled_orders
 
-def perform_rebalance(portfolio_solved: Dict[str, pd.DataFrame], account: str) -> Optional[pd.DataFrame]:
+def perform_rebalance(portfolio_solved: Dict[str, pd.DataFrame], account: str, port: int = 4003) -> Optional[pd.DataFrame]:
     """Execute a single rebalance iteration."""
     print("Portfolio is out of balance - executing trades")
     print("Calculating order constraints")
-    order_quantities = constrain_orders(portfolio_solved, account=account)
+    order_quantities = constrain_orders(portfolio_solved, port=port, account=account)
 
     print("Pricing orders")
-    orders = price_orders(order_quantities, account=account)
+    orders = price_orders(order_quantities, port=port, account=account)
 
     print(f"\nOrders:\n{orders}\n")
     
@@ -97,7 +97,7 @@ def plot_rebalance_progress(rebalance_history: pd.DataFrame) -> None:
     print("\n")
 
 
-def run_rebalancer(account: str, model: str) -> None:
+def run_rebalancer(account: str, model: str, port: int = 4003) -> None:
     """Main rebalancing loop."""
     run = 0
     out_of_band = True
@@ -106,16 +106,16 @@ def run_rebalancer(account: str, model: str) -> None:
     while out_of_band:
         run += 1
         print(f"Loading portfolio model from {model}")
-        portfolio_model = get_portfolio_model(model, account=account)
+        portfolio_model = get_portfolio_model(model, account=account, port=port)
         
         print("Fetching current portfolio state")
-        portfolio_state = get_portfolio_state(account=account)
+        portfolio_state = get_portfolio_state(account=account, port=port)
 
         print("Calculating portfolio targets")
         portfolio_targets = load_portfolio_targets(portfolio_state, portfolio_model)
 
         print("Pricing portfolio")
-        portfolio_priced = price_portfolio(portfolio_targets, account=account)
+        portfolio_priced = price_portfolio(portfolio_targets, account=account, port=port)
 
         print("Solving portfolio optimization")
         portfolio_solved = solve_portfolio(portfolio_priced)
@@ -133,6 +133,6 @@ def run_rebalancer(account: str, model: str) -> None:
         )
 
         if out_of_band:
-            perform_rebalance(portfolio_solved, account)
+            perform_rebalance(portfolio_solved, account, port=port)
         else:
             print("Portfolio weights are within tolerance. Exiting") 

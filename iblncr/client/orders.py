@@ -138,7 +138,7 @@ def submit_orders(orders, port: int = 4003, account: str = None):
     Returns:
         None
     """
-    ib = ib_connect(port = port, account = account)
+    ib = ib_connect(port=port, account=account)
     contracts = [Stock(conId=i) for i in orders.conid.tolist()]
     all = ib.qualifyContracts(*contracts)    
     orders['contract'] = all
@@ -217,3 +217,4 @@ def cancel_orders(port: int = 4003, account: str = None):
     ib = ib_connect(port = port, account = account)
     ib.reqGlobalCancel()
     ib_disconnect(ib)
+

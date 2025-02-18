@@ -73,7 +73,10 @@ def get_portfolio_state(port: int = 4003, account: str = None):
         This function handles the connection and disconnection to IB automatically through
         its constituent functions get_cash() and get_positions().
     """
-    portfolio = {"cash": get_cash(port=port, account=account), "positions": get_positions(port=port, account=account)}
+    portfolio = {
+        "cash": get_cash(port=port, account=account), 
+        "positions": get_positions(port=port, account=account)
+    }
     return portfolio
 
 

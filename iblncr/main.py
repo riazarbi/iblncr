@@ -23,8 +23,7 @@ def cli(account: str, model: str, port: int) -> None:
     
     if account is None:
         try:
-            # This will raise ValueError with available accounts
-            ib_connect(port=port, account=None)
+            ib_connect(port=port, account=None)  # Port passed correctly
         except ValueError as e:
             print(e)
             return
@@ -32,7 +31,7 @@ def cli(account: str, model: str, port: int) -> None:
     print(f"Starting portfolio rebalancing for account {account} on port {port}")
     
     try:
-        run_rebalancer(account, model, port=port)
+        run_rebalancer(account, model, port=port)  # Port passed correctly
     except Exception as e:
         print(f"An error occurred: {str(e)}")
         raise
