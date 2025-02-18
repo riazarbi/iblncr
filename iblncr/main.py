@@ -1,5 +1,4 @@
 import time
-import logging
 from iblncr.client.portfolio import (
     get_portfolio_model,
     get_portfolio_state,
@@ -14,33 +13,30 @@ from iblncr.client.orders import (
 )
 from iblncr.client.connection import ib_connect
 
-def setup_logging():
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s - %(levelname)s - %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S'
-    )
-    return logging.getLogger(__name__)
-
 def main(account: str):
-    logger = setup_logging()
-    logger.info(f"Starting portfolio rebalancing for account {account}")
+    print(f"=> Starting portfolio rebalancing for account {account}")
     
     try:
-        logger.info("Loading portfolio model from iblncr/data/sample_model.yaml")
+        print("=> Loading portfolio model from iblncr/data/sample_model.yaml")
         portfolio_model = get_portfolio_model("iblncr/data/sample_model.yaml", account=account)
         
-        logger.info("Fetching current portfolio state")
+        print("=> Fetching current portfolio state")
         portfolio_state = get_portfolio_state(account=account)
         
-        logger.info("Calculating portfolio targets")
+        print("=> Calculating portfolio targets")
         portfolio_targets = load_portfolio_targets(portfolio_state, portfolio_model)
 
-        logger.info("Pricing portfolio")
-        portfolio_priced = price_portfolio(portfolio_targets, account = account)
-        
-        logger.info("Solving portfolio optimization")
+        print("=> Pricing portfolio")
+        portfolio_priced = price_portfolio(portfolio_targets, account=account)
+                
+        print("=> Solving portfolio optimization")
         portfolio_solved = solve_portfolio(portfolio_priced)
+
+        print("\nPortfolio Positions:")
+        print(portfolio_solved['positions'])
+        print("\nPortfolio Cash:")
+        print(portfolio_solved['cash'])
+        print("\n")
 
         out_of_band = (
             any(portfolio_solved['cash'].out_of_band) or
@@ -48,26 +44,33 @@ def main(account: str):
         )
 
         if out_of_band:
-            logger.info("Portfolio is out of balance - executing trades")
-            logger.info("Calculating order constraints")
-            order_quantities = constrain_orders(portfolio_solved, account = account)
-            
-            logger.info("Pricing orders")
-            orders = price_orders(order_quantities, account = account)
-            
-            logger.info("Submitting orders")
-            submit_orders(orders, account = account)
-            
-            logger.info("Waiting 30 seconds before canceling unfilled orders")
-            time.sleep(30)
-            
-            logger.info("Canceling remaining orders")
-            cancel_orders(account = account)
+            print("=> Portfolio is out of balance - executing trades")
+            print("=> Calculating order constraints")
+            order_quantities = constrain_orders(portfolio_solved, account=account)
+
+            print("=> Pricing orders")
+            orders = price_orders(order_quantities, account=account)
+
+            print("\nOrders:")
+            print(orders)
+            print("\n")
+
+            if orders is not None:
+                print("=> Submitting orders")
+                submit_orders(orders, account=account)     
+                print("=> Waiting 30 seconds before canceling unfilled orders")
+                time.sleep(30)
+
+                print("=> Canceling remaining orders")
+                cancel_orders(account=account)
+            else:
+                print("=> Failed to price orders.")
+                
         else: 
-            logger.info("Portfolio weights are within tolerance. Exiting")
+            print("=> Portfolio weights are within tolerance. Exiting")
 
     except Exception as e:
-        logger.error(f"An error occurred: {str(e)}", exc_info=True)
+        print(f"ERROR: An error occurred: {str(e)}")
         raise
 
 if __name__ == "__main__":
@@ -85,4 +88,4 @@ if __name__ == "__main__":
             # The error message already contains the account list
             print(str(e))
     else:
-        main(args.account)  
+        main(args.account)
