@@ -98,32 +98,26 @@ def price_orders(order_quantities,
             - limit (float): Calculated limit price (midpoint)
             - value (float): Order value (quantity * limit price)
     """
-    quotes = get_quotes(order_quantities.conid.tolist(), port = port, account = account)
+    quotes = get_quotes(order_quantities.conid.tolist(), port=port, account=account)
 
     quotes = quotes[~quotes[['bid_price', 'ask_price', 'bid_size', 'ask_size']].isin([-1, 0]).any(axis=1)]
-
-    # Drop rows where any of the specified columns are NA (if needed)
     quotes = quotes.dropna(subset=['bid_price', 'ask_price', 'bid_size', 'ask_size'])
 
-    # Check if DataFrame is not empty, calculate spread and filter based on condition
+    # Create a new DataFrame instead of modifying a view
     if len(quotes) > 0:
         quotes['spread'] = (quotes['ask_price'] - quotes['bid_price']) / quotes['ask_price']
         quotes = quotes[quotes['spread'] < spread_tolerance]
-
-    # Check if quotes DataFrame is not empty
-    if len(quotes) > 0:
         quotes['limit'] = (quotes['ask_price'] + quotes['bid_price']) / 2
-        quotes = quotes[['conid', 'limit']]  # Select only 'symbol' and 'limit'
-    else:
-        quotes = order_quantities[['conid']]  # Select only 'symbol'
-        quotes['limit'] = np.nan  # Add 'limit' column with NA (NaN)
+        quotes = quotes[['conid', 'limit']]
 
-    orders = pd.merge(order_quantities, quotes, on='conid', how='left')
-    orders.limit = round(orders.limit, 2)
-    orders['value'] = orders.order * orders.limit
+        orders = pd.merge(order_quantities, quotes, on='conid', how='left')
+        orders.limit = round(orders.limit, 2)
+        orders['value'] = orders.order * orders.limit
     
-    return(orders)
-
+        return orders
+    else:
+        return None
+    
 
 def submit_orders(orders, port: int = 4003, account: str = None):
     """Submit limit orders to Interactive Brokers.
