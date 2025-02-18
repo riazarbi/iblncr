@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 from ib_async.ib import LimitOrder
 from ib_async import Stock
+from ib_async import util
 from .connection import ib_connect, ib_disconnect
 from .pricing import get_quotes, get_median_daily_volume
 
@@ -168,8 +169,38 @@ def get_orders(port: int = 4003, account: str = None):
     """
     ib = ib_connect(port = port, account = account)
     orders = ib.orders()
+    
     ib_disconnect(ib)
-    return orders
+    return util.df(orders)
+
+
+def get_filled_orders(port: int = 4003, account: str = None):
+    """Get all filled orders from the current Interactive Brokers session.
+
+    Connects to TWS/Gateway, retrieves all filled trades from the current session,
+    and disconnects.
+
+    Args:
+        port (int, optional): TWS/Gateway port number. Defaults to 4003.
+        account (str, optional): IB account to use. Defaults to None.
+
+    Returns:
+        pd.DataFrame: DataFrame of filled orders containing:
+            - orderId: The IB order identifier
+            - time: Fill timestamp
+            - symbol: Contract symbol
+            - side: BUY/SELL
+            - quantity: Number of shares/contracts filled
+            - avgFillPrice: Average fill price
+            - commission: Trade commission
+    """
+    ib = ib_connect(port=port, account=account)
+    # Get filled trades from current session
+    filled_trades = ib.fills()
+    
+    ib_disconnect(ib)
+    # Convert to DataFrame with relevant columns
+    return util.df(filled_trades)
 
 
 def cancel_orders(port: int = 4003, account: str = None):
