@@ -13,7 +13,9 @@ docker run -it --rm --name broker  -p 4003:4003 ghcr.io/riazarbi/ib-headless:10.
 Install iblncr with pipx:
 
 ```bash
-pipx install git+https://github.com/riazarbi/rblncr.git
+git clone git@github.com:riazarbi/iblncr.git
+cd iblncr
+pipx install .
 ```
 
 Once installed, you can run the application with:
