@@ -36,23 +36,23 @@ def update_rebalance_history(portfolio_solved, rebalance_history, run):
     return pd.concat([rebalance_history, current_snapshot], ignore_index=True)
 
 
-def execute_orders(orders: pd.DataFrame, account: str) -> Optional[pd.DataFrame]:
+def execute_orders(orders: pd.DataFrame, account: str, port: int = 4003) -> Optional[pd.DataFrame]:
     """Execute orders and handle the order lifecycle."""
     if orders is None:
         print("Failed to price orders")
         return None
 
     print("Submitting orders")
-    submit_orders(orders, account=account)     
+    submit_orders(orders, account=account, port=port)     
     
     print("Waiting 60 seconds before cancelling unfilled orders")
     time.sleep(60)
 
     print("Getting filled orders")
-    filled_orders = get_filled_orders(account=account)
+    filled_orders = get_filled_orders(account=account, port=port)
     
     print("Cancelling remaining orders\n")
-    cancel_orders(account=account)
+    cancel_orders(account=account, port=port)
     
     return filled_orders
 
@@ -67,7 +67,7 @@ def perform_rebalance(portfolio_solved: Dict[str, pd.DataFrame], account: str, p
 
     print(f"\nOrders:\n{orders}\n")
     
-    return execute_orders(orders, account)
+    return execute_orders(orders, account=account, port=port)
 
 
 def plot_rebalance_progress(rebalance_history: pd.DataFrame) -> None:
@@ -125,7 +125,6 @@ def run_rebalancer(account: str, model: str, port: int = 4003) -> None:
 
         rebalance_history = update_rebalance_history(portfolio_solved, rebalance_history, run)
 
-        plot_rebalance_progress(rebalance_history)
 
         out_of_band = (
             any(portfolio_solved['cash'].out_of_band) or
@@ -133,6 +132,8 @@ def run_rebalancer(account: str, model: str, port: int = 4003) -> None:
         )
 
         if out_of_band:
+            plot_rebalance_progress(rebalance_history)
             perform_rebalance(portfolio_solved, account, port=port)
         else:
+
             print("Portfolio weights are within tolerance. Exiting") 
