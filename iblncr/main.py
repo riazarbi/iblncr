@@ -1,7 +1,8 @@
 import click
 import sys
-from iblncr.client.connection import ib_connect
+from iblncr.client.connection import ib_connect, get_accounts
 from iblncr.rebalancer import run_rebalancer
+from iblncr.docker_manager import run_docker_container
 
 @click.command(context_settings=dict(help_option_names=['-h', '--help']))
 @click.option(
@@ -10,8 +11,8 @@ from iblncr.rebalancer import run_rebalancer
 )
 @click.option(
     '--model', 
-    default='iblncr/data/sample_model.yaml',
-    help='Path to model YAML file'
+    required=True,
+    help='Path to model YAML file (e.g. iblncr/data/sample_model.yaml)'
 )
 @click.option(
     '--port',
@@ -19,7 +20,8 @@ from iblncr.rebalancer import run_rebalancer
     type=int,
     help='Port number for IB Gateway connection (default: 4003)'
 )
-def cli(account: str, model: str, port: int) -> None:
+@click.option('--launch', is_flag=True, help='Launch the IB Gateway Docker container')
+def cli(account: str, model: str, port: int, launch):
     """Interactive Brokers Portfolio Rebalancer"""
     # Show help when no arguments are provided
     if len(sys.argv) == 1:
@@ -27,12 +29,27 @@ def cli(account: str, model: str, port: int) -> None:
         click.echo(ctx.get_help())
         ctx.exit()
     
+    # Handle launch flag first
+    if launch:
+        run_docker_container()
+        return
+    
+    # Get available accounts first
+    available_accounts = get_accounts()
+    
     if account is None:
         try:
             ib_connect(port=port, account=None)
-        except ValueError as e:
+        except (ValueError, ConnectionRefusedError) as e:
             print(e)
             return
+    
+    if account not in available_accounts:
+        print(f"Error: Account '{account}' not found.")
+        print("\nAvailable accounts:")
+        for account in available_accounts:
+            print(f"  - {account}")
+        sys.exit(1)
     
     print(f"Starting portfolio rebalancing for account {account} on port {port}")
     
@@ -40,7 +57,7 @@ def cli(account: str, model: str, port: int) -> None:
         run_rebalancer(account, model, port=port)
     except Exception as e:
         print(f"An error occurred: {str(e)}")
-        raise
+        sys.exit(1)  # Exit with error code
 
 if __name__ == '__main__':
     cli()

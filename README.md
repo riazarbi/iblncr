@@ -4,19 +4,30 @@ A command line tool for rebalancing a portfolio of stocks and ETFs via [Interact
 
 ## Basic usage
 
+To use iblncr, install it with pipx:
+
+```bash
+pipx install git+https://github.com/riazarbi/iblncr.git
+```
+
 The Interactive Brokers API _only_ works with a locally installed, working Trader Workstatation or IB Gateway application. If you don't have one, you can use a headless docker image to run one.
+
+
+You can either manually start the Docker container:
 
 ```bash
 # in a separate terminal
 docker run -it --rm --name broker  -p 4003:4003 ghcr.io/riazarbi/ib-headless:10.30.1t
 ```
-Install iblncr with pipx:
 
+Or use the built-in launch command:
 ```bash
- pipx install git+https://github.com/riazarbi/iblncr.git
+iblncr --launch
 ```
+This will start the IB Gateway Docker container, and prompt you for your account type, username and password. You can use CTRL-C to stop it gracefully.
 
-Once installed, you can run the application with:
+
+Once installed, you can run the iblncr in a separate terminal window with:
 
 ```bash
 iblncr --account <account_number> --model <model_file> --port <port_number>
