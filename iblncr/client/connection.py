@@ -1,5 +1,17 @@
 from ib_async.ib import IB
 
+def get_accounts():
+    """Get list of available accounts from IB Gateway"""
+    ib = IB()
+    try:
+        ib.connect(host="127.0.0.1", port=4003, clientId=1)
+        accounts = ib.managedAccounts()
+        ib.disconnect()
+        return accounts
+    except Exception as e:
+        print(f"Error getting accounts: {e}")
+        return []
+
 def ib_connect(host: str = "127.0.0.1", port: int = 4003, client_id: int = 1,
               account: str = None):
     """
