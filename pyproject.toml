@@ -1,8 +1,8 @@
 [tool.poetry]
 name = "iblncr"
-version = "0.1.0"
+version = "0.2.0"
 description = "A Python package to interact with Interactive Brokers TWS API using ib-async"
-authors = ["Riaz Arbi <your.email@example.com>"]
+authors = ["Riaz Arbi <riazarbi@users.noreply.github.com>"]
 license = "MIT"
 readme = "README.md"
 repository = "https://github.com/riazarbi/iblncr"
@@ -13,11 +13,16 @@ iblncr = "iblncr.main:cli"
 
 [tool.poetry.dependencies]
 python = "^3.11"
-ib-async = ">=0.1.2"  # Replace with the latest stable version
+ib-async = ">=0.1.2"
 pandas = "^2.0"
 pyyaml = "^6.0"
 plotille = "^4.0"
 click = "^8.1.7"
+
+[tool.poetry.group.dev.dependencies]
+pytest = ">=7.0.0"
+pytest-mock = ">=3.10.0"
+pytest-cov = ">=4.0.0"  # for coverage reporting
 
 [build-system]
 requires = ["poetry-core"]

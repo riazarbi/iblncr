@@ -13,9 +13,7 @@ docker run -it --rm --name broker  -p 4003:4003 ghcr.io/riazarbi/ib-headless:10.
 Install iblncr with pipx:
 
 ```bash
-git clone git@github.com:riazarbi/iblncr.git
-cd iblncr
-pipx install .
+ pipx install git+https://github.com/riazarbi/iblncr.git
 ```
 
 Once installed, you can run the application with:
@@ -31,4 +29,27 @@ Argument defaults are as follows:
 - port: 4003
 
 If you don't specify an account, the application will list the available accounts given by the API and prompt you to select one.
+
+## Development
+
+To run the tests:
+
+```bash
+poetry install --with dev
+poetry run pytest
+```
+
+To run the application:
+
+```bash
+poetry run iblncr --account <account_number> --model <model_file> --port <port_number>
+```
+
+## AI Code Generation
+
+The code in this repo is based on an earlier R package I wrote called [rblncr](https://github.com/riazarbi/rblncr). I used [Cursor](https://www.cursor.com/) to refactor the R code into Python. 
+
+The unit tests were written by [Cursor](https://www.cursor.com/).
+
+
 

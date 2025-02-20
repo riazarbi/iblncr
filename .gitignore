@@ -3,3 +3,6 @@ supervisord.pid
 .env
 iblncr/__pycache__/*
 iblncr/client/__pycache__/*
+build/*
+iblncr.egg-info/*
+tests/__pycache__/*
