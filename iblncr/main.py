@@ -18,7 +18,11 @@ def cli():
 @cli.command()
 def launch():
     """Launch the IB Gateway Docker container"""
-    run_docker_container()
+    try:
+        run_docker_container()
+    except Exception as e:
+        click.echo(f"Docker error: {str(e)}", err=True)
+        sys.exit(1)
 
 @cli.command()
 @click.option(
