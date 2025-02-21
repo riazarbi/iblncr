@@ -1,10 +1,10 @@
 from ib_async.ib import IB
 
-def get_accounts():
+def get_accounts(port: int = 4003):
     """Get list of available accounts from IB Gateway"""
     ib = IB()
     try:
-        ib.connect(host="127.0.0.1", port=4003, clientId=1)
+        ib.connect(host="127.0.0.1", port=port, clientId=1)
         accounts = ib.managedAccounts()
         ib.disconnect()
         return accounts

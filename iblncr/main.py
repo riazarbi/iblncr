@@ -4,15 +4,32 @@ from iblncr.client.connection import ib_connect, get_accounts
 from iblncr.rebalancer import run_rebalancer
 from iblncr.docker_manager import run_docker_container
 
-@click.command(context_settings=dict(help_option_names=['-h', '--help']))
+@click.group(context_settings=dict(help_option_names=['-h', '--help']))
+def cli():
+    """Interactive Brokers Portfolio Rebalancer
+    """
+    
+    # Show help when no arguments are provided
+    if len(sys.argv) == 1:
+        ctx = click.get_current_context()
+        click.echo(ctx.get_help())
+        ctx.exit()
+
+@cli.command()
+def launch():
+    """Launch the IB Gateway Docker container"""
+    run_docker_container()
+
+@cli.command()
 @click.option(
     '--account', 
     help='Account number. If not provided, available accounts will be listed.'
 )
+
 @click.option(
     '--model', 
     required=True,
-    help='Path to model YAML file (e.g. iblncr/data/sample_model.yaml)'
+    help='Path to model YAML file (e.g., iblncr/data/sample_model.yaml)'
 )
 @click.option(
     '--port',
@@ -20,22 +37,10 @@ from iblncr.docker_manager import run_docker_container
     type=int,
     help='Port number for IB Gateway connection (default: 4003)'
 )
-@click.option('--launch', is_flag=True, help='Launch the IB Gateway Docker container')
-def cli(account: str, model: str, port: int, launch):
-    """Interactive Brokers Portfolio Rebalancer"""
-    # Show help when no arguments are provided
-    if len(sys.argv) == 1:
-        ctx = click.get_current_context()
-        click.echo(ctx.get_help())
-        ctx.exit()
-    
-    # Handle launch flag first
-    if launch:
-        run_docker_container()
-        return
-    
+def rebalance(account: str, model: str, port: int):
+    """Run the portfolio rebalancer"""
     # Get available accounts first
-    available_accounts = get_accounts()
+    available_accounts = get_accounts(port=port)
     
     if account is None:
         try:
