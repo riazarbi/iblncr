@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import Mock, patch
-from iblncr.client.connection import ib_connect, ib_disconnect, get_ib_server_time
+from iblncr.client.connection import ib_connect, ib_disconnect, get_ib_server_time, get_accounts
 from datetime import datetime
 
 @pytest.fixture
@@ -55,4 +55,21 @@ def test_get_ib_server_time(mock_ib):
     # Should be called twice due to the account check
     assert mock_ib.connect.call_count == 2
     mock_ib.disconnect.assert_called()
-    mock_ib.reqCurrentTime.assert_called_once() 
+    mock_ib.reqCurrentTime.assert_called_once()
+
+def test_get_accounts():
+    with patch('iblncr.client.connection.IB') as mock_ib:
+        # Setup mock IB instance
+        mock_instance = mock_ib.return_value
+        mock_instance.managedAccounts.return_value = ['account1', 'account2']
+        
+        accounts = get_accounts()
+        
+        mock_instance.connect.assert_called_once_with(
+            host="127.0.0.1", 
+            port=4003, 
+            clientId=1
+        )
+        mock_instance.managedAccounts.assert_called_once()
+        mock_instance.disconnect.assert_called_once()
+        assert accounts == ['account1', 'account2'] 
