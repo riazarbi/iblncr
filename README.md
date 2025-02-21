@@ -12,7 +12,6 @@ pipx install git+https://github.com/riazarbi/iblncr.git
 
 The Interactive Brokers API _only_ works with a locally installed, working Trader Workstatation or IB Gateway application. If you don't have one, you can use a headless docker image to run one.
 
-
 You can either manually start the Docker container:
 
 ```bash
@@ -22,7 +21,7 @@ docker run -it --rm --name broker  -p 4003:4003 ghcr.io/riazarbi/ib-headless:10.
 
 Or use the built-in launch command:
 ```bash
-iblncr --launch
+iblncr launch
 ```
 This will start the IB Gateway Docker container, and prompt you for your account type, username and password. You can use CTRL-C to stop it gracefully.
 
@@ -30,13 +29,13 @@ This will start the IB Gateway Docker container, and prompt you for your account
 Once installed, you can run the iblncr in a separate terminal window with:
 
 ```bash
-iblncr --account <account_number> --model <model_file> --port <port_number>
+iblncr rebalance --account <account_number> --model <model_file> --port <port_number>
 ```
 
 Argument defaults are as follows:
 
 - account: None
-- model: iblncr/data/sample_model.yaml
+- model: None, but there is a sample at iblncr/data/sample_model.yaml
 - port: 4003
 
 If you don't specify an account, the application will list the available accounts given by the API and prompt you to select one.
@@ -53,7 +52,7 @@ poetry run pytest
 To run the application:
 
 ```bash
-poetry run iblncr --account <account_number> --model <model_file> --port <port_number>
+poetry run iblncr rebalance --account <account_number> --model <model_file> --port <port_number>
 ```
 
 ## AI Code Generation
