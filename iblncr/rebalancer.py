@@ -132,7 +132,7 @@ def run_rebalancer(account: str, model: str, port: int = 4003) -> None:
         )
 
         if out_of_band:
-            plot_rebalance_progress(rebalance_history)
+            #plot_rebalance_progress(rebalance_history)
             perform_rebalance(portfolio_solved, account, port=port)
         else:
 
