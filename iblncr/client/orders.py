@@ -1,11 +1,12 @@
 import pandas as pd
 import numpy as np
+import time
 from ib_async.ib import LimitOrder
 from ib_async import Stock
 from ib_async import util
 from .connection import ib_connect, ib_disconnect
 from .pricing import get_quotes, get_median_daily_volume
-
+from typing import Optional
 
 def constrain_orders(portfolio_solved,
                     daily_vol_pct_limit = 0.02,
@@ -99,6 +100,11 @@ def price_orders(order_quantities,
             - limit (float): Calculated limit price (midpoint)
             - value (float): Order value (quantity * limit price)
     """
+    
+    if len(order_quantities) == 0:
+        print("No order quantities to price")
+        return None
+    
     quotes = get_quotes(order_quantities.conid.tolist(), port=port, account=account)
 
     quotes = quotes[~quotes[['bid_price', 'ask_price', 'bid_size', 'ask_size']].isin([-1, 0]).any(axis=1)]
@@ -117,6 +123,7 @@ def price_orders(order_quantities,
     
         return orders
     else:
+        print("No quotes found for orders quantities")
         return None
     
 
@@ -200,7 +207,12 @@ def get_filled_orders(port: int = 4003, account: str = None):
     
     ib_disconnect(ib)
     # Convert to DataFrame with relevant columns
-    return util.df(filled_trades)
+    filled_orders = util.df(filled_trades)
+    if len(filled_orders) == 0:
+        print("No filled orders found")
+        return None
+    else:
+        return filled_orders
 
 
 def cancel_orders(port: int = 4003, account: str = None):
@@ -218,3 +230,22 @@ def cancel_orders(port: int = 4003, account: str = None):
     ib.reqGlobalCancel()
     ib_disconnect(ib)
 
+def execute_orders(orders: pd.DataFrame, account: str, port: int = 4003) -> Optional[pd.DataFrame]:
+    """Execute orders and handle the order lifecycle."""
+    if orders is None:
+        print("Failed to price orders")
+        return None
+
+    print("Submitting orders")
+    submit_orders(orders, account=account, port=port)     
+    
+    print("Waiting 60 seconds before cancelling unfilled orders")
+    time.sleep(60)
+
+    print("Getting filled orders")
+    filled_orders = get_filled_orders(account=account, port=port)
+    
+    print("Cancelling remaining orders\n")
+    cancel_orders(account=account, port=port)
+    
+    return filled_orders
