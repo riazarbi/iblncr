@@ -10,7 +10,7 @@ from typing import Optional
 
 def constrain_orders(portfolio_solved,
                     daily_vol_pct_limit = 0.02,
-                    min_order_size = 1000,
+                    min_order_size = 100,
                     max_order_size = 10000,
                     buy_only = False,
                     port: int = 4003,
