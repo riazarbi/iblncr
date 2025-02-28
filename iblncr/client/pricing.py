@@ -146,7 +146,7 @@ def price_portfolio(portfolio_targets, port: int = 4003, account: str = None):
     return(portfolio)
 
 
-def solve_portfolio(portfolio_priced):
+def solve_portfolio(portfolio_priced, port: int = 4003, account: str = None):
     """
     Calculates target positions and optimal orders to rebalance a portfolio.
 
@@ -195,8 +195,30 @@ def solve_portfolio(portfolio_priced):
     post_rebalancing_cash_balance = total_value - sum(positions.optimal_value)
     cash['optimal_value'] = post_rebalancing_cash_balance
 
-    positions = positions[['conid', 'percent_held', 'percent_target', 'position', 'position_target', 'percent_deviation', 'price', 'optimal_order', 'optimal_order_value', 'out_of_band']]
-    cash = cash[['currency', 'percent_held', 'percent_target', 'position', 'position_target', 'percent_deviation', 'price', 'optimal_value', 'out_of_band']]
+    positions = positions[['conid', 'percent_held', 'percent_target', 'position', 'position_target', 'percent_deviation', 'price', 'optimal_order', 'optimal_order_value', 'out_of_band']].copy()
+    cash = cash[['currency', 'percent_held', 'percent_target', 'position', 'position_target', 'percent_deviation', 'price', 'optimal_value', 'out_of_band']].copy()
+
+    positions['percent_deviation'] = positions['percent_deviation'].fillna(0).replace([float('inf'), float('-inf')], 100).round(1)
+    positions['percent_held'] = positions['percent_held'].round(1)
+    positions['percent_target'] = positions['percent_target'].round(1)
+    positions['position'] = positions['position'].astype(int)
+    positions['position_target'] = positions['position_target'].astype(int)
+    positions['optimal_order'] = positions['optimal_order'].astype(int)
+    positions['optimal_order_value'] = positions['optimal_order_value'].round(2)
+
+    cash['percent_held'] = cash['percent_held'].round(1)
+    cash['percent_target'] = cash['percent_target'].round(1)
+    cash['position'] = cash['position'].astype(int)
+    cash['position_target'] = cash['position_target'].astype(int)
+    cash['optimal_value'] = cash['optimal_value'].round(2)
+
+    ib = ib_connect(port = port, account = account)
+    conids = positions.conid
+    contracts = [Stock(conId=i) for i in conids]
+    stocks = ib.qualifyContracts(*contracts)    
+    ib_disconnect(ib)
+    symbols = [stock.symbol for stock in stocks]
+    positions.insert(0, 'symbol', symbols)
 
     portfolio_priced['cash'] = cash
     portfolio_priced['positions'] = positions

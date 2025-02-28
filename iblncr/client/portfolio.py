@@ -2,6 +2,7 @@ import pandas as pd
 import yaml
 from ib_async import Stock
 from .connection import ib_connect, ib_disconnect
+from datetime import datetime
 
 def get_cash(port: int = 4003, account: str = None):
     """
@@ -80,6 +81,50 @@ def get_portfolio_state(port: int = 4003, account: str = None):
     return portfolio
 
 
+def create_model_from_portfolio(portfolio_state, file_path='model.yaml', port: int = 4003, account: str = None):
+    # Extract cash and positions from portfolio_state
+    positions_df = portfolio_state['positions']
+
+    ib = ib_connect(port = port, account = account)
+    conids = positions_df.conid
+    contracts = [Stock(conId=i) for i in conids]
+    stocks = ib.qualifyContracts(*contracts)    
+    ib_disconnect(ib)
+    symbols = [stock.symbol for stock in stocks]
+    exchanges = [stock.exchange for stock in stocks]
+    currencies = [stock.currency for stock in stocks]
+    positions_df.insert(0, 'currency', currencies)
+    positions_df.insert(0, 'exchange', exchanges)
+    positions_df.insert(0, 'symbol', symbols)
+
+
+    # Create the YAML structure using a standard dictionary
+    model_data = {
+        'name': 'generated_portfolio',
+        'description': 'Generated from portfolio state',
+        'cash': {'percent': 5},  # Hardcoded to 5%
+        'positions': [],
+        'tolerance': {'percent': 5},  # Assuming a default value, adjust as needed
+        'cooldown': {'days': 365},  # Assuming a default value, adjust as needed
+        'buy_only': False,  # Assuming a default value, adjust as needed
+        'created_at': datetime.now().isoformat(),
+        'updated_at': datetime.now().isoformat()
+    }
+
+    # Populate positions
+    for _, row in positions_df.iterrows():
+        model_data['positions'].append({
+            'symbol': str(row['symbol']),  # Ensure symbol is a string
+            'exchange': str(row['exchange']),  # Assuming a default value, adjust as needed
+            'currency': str(row['currency']),  # Assuming a default value, adjust as needed
+            'percent': 0  # Evenly split percentage
+        })
+
+    # Write to YAML file
+    with open(file_path, 'w') as file:
+        yaml.dump(model_data, file, default_flow_style=False, sort_keys=False)
+
+
 def get_portfolio_model(path, port: int = 4003, account: str = None):
     """
     Loads a portfolio model from a YAML file and enriches it with contract IDs from Interactive Brokers.
@@ -152,3 +197,4 @@ def load_portfolio_targets(portfolio_state, portfolio_model):
 
     portfolio_targets = {"cash": cash, "positions": targets, "tolerance": tolerance}
     return(portfolio_targets)
+

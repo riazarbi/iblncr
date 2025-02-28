@@ -40,6 +40,20 @@ Argument defaults are as follows:
 
 If you don't specify an account, the application will list the available accounts given by the API and prompt you to select one.
 
+## Model file construction
+
+You can create a basic 'starter model' file with the command 
+
+```
+iblncr rebalance --account [ACCOUNT_ID]
+```
+
+The 'starter model' will be populated with your current portfolio holdings, but with np target percentages set. You need to manually set these by opening the file, entering the values, and saving the file.
+
+### Adding new tickers
+
+You can add or remove position entries from the file to alter your target portfolio weights. If you cannot figure out the symbol, exchange or currency for a holding you can use [this tool](https://misc.interactivebrokers.com/cstools/contract_info/v3.10/index.php?site=IB) to find the correct details. 
+
 ## Development
 
 To run the tests:

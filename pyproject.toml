@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "iblncr"
-version = "0.3.1"
+version = "0.5.0"
 description = "A Python package to interact with Interactive Brokers TWS API using ib-async"
 authors = ["Riaz Arbi <riazarbi@users.noreply.github.com>"]
 license = "MIT"
