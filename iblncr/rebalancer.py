@@ -1,8 +1,7 @@
 import pandas as pd
 from datetime import datetime
-from typing import Dict, Optional
 import plotille
-import numpy as np
+import os
 
 from iblncr.client.portfolio import (
     get_portfolio_model,
@@ -13,9 +12,6 @@ from iblncr.client.pricing import price_portfolio, solve_portfolio
 from iblncr.client.orders import (
     constrain_orders,
     price_orders,
-    submit_orders,
-    cancel_orders,
-    get_filled_orders,
     execute_orders
 )
 
@@ -67,6 +63,14 @@ def plot_rebalance_progress(rebalance_history: pd.DataFrame) -> None:
     print("\n")
 
 
+def clear_screen():
+    # Check the operating system and clear the screen accordingly
+    if os.name == 'nt':  # For Windows
+        os.system('cls')
+    else:  # For Unix/Linux/Mac
+        os.system('clear')
+
+
 def run_rebalancer(account: str, model: str, port: int = 4003) -> None:
     """Main rebalancing loop."""
     run = 0
@@ -75,6 +79,7 @@ def run_rebalancer(account: str, model: str, port: int = 4003) -> None:
     rebalance_history = pd.DataFrame()
 
     while out_of_band and not no_change:
+        clear_screen()  # Clear the terminal screen
         run += 1
         print(f"Loading portfolio model from {model}")
         portfolio_model = get_portfolio_model(model, account=account, port=port)
@@ -113,6 +118,7 @@ def run_rebalancer(account: str, model: str, port: int = 4003) -> None:
         if no_change:
             plot_rebalance_progress(rebalance_history)
             print("Rebalancing operation has not changed portfolio weights in the last 5 runs. This is pointless. Exiting.") 
+            print("... Perhaps you should log in to TWS and manually rebalance your portfolio?") 
         elif out_of_band:
             plot_rebalance_progress(rebalance_history)
             print("Portfolio is out of balance - executing trades")
@@ -133,3 +139,5 @@ def run_rebalancer(account: str, model: str, port: int = 4003) -> None:
         else:
             print("Portfolio weights are within tolerance. Exiting") 
         print(f"\nEnd of run #{str(run)} ----------------------------------\n")
+
+
