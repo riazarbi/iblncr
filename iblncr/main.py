@@ -2,6 +2,7 @@ import click
 import sys
 from iblncr.client.connection import ib_connect, get_accounts
 from iblncr.rebalancer import run_rebalancer
+from iblncr.client.orders import cancel_orders
 from iblncr.docker_manager import run_docker_container
 
 @click.group(context_settings=dict(help_option_names=['-h', '--help']))
@@ -63,6 +64,7 @@ def rebalance(account: str, model: str, port: int):
     print(f"Starting portfolio rebalancing for account {account} on port {port}")
     
     try:
+        cancel_orders(port = port, account = account)
         run_rebalancer(account, model, port=port)
     except Exception as e:
         print(f"An error occurred: {str(e)}")
