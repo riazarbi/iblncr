@@ -121,7 +121,7 @@ def run_rebalancer(account: str, model: str, port: int = 4003) -> None:
             print("... Perhaps you should log in to TWS and manually rebalance your portfolio?") 
         elif out_of_band:
             plot_rebalance_progress(rebalance_history)
-            print("Portfolio is out of balance - executing trades")
+            print("Portfolio is out of balance")
             print("Calculating order constraints")
 
             # Pass buy_only to constrain_orders
@@ -134,10 +134,12 @@ def run_rebalancer(account: str, model: str, port: int = 4003) -> None:
     
             filled_orders = execute_orders(orders, account=account, port=port)
 
-            print(f"\nFilled Orders:\n{filled_orders}\n")
+            
             
         else:
-            print("Portfolio weights are within tolerance. Exiting") 
+            print("Portfolio weights are within tolerance. Exiting")
+        print(f"\nFilled Orders:\n{filled_orders}\n")
+         
         print(f"\nEnd of run #{str(run)} ----------------------------------\n")
 
 
