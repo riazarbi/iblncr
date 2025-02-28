@@ -22,9 +22,9 @@ from iblncr.client.orders import (
 def update_rebalance_history(portfolio_solved, rebalance_history, run):
     """Updates the rebalance history DataFrame with current portfolio state."""
     # Create combined history entry
-    positions_history = portfolio_solved['positions'][['conid', 'percent_held', 'percent_target', 'percent_deviation']].copy()
+    positions_history = portfolio_solved['positions'][['symbol', 'percent_held', 'percent_target', 'percent_deviation']].copy()
     positions_history['type'] = 'position'
-    positions_history.rename(columns={'conid': 'identifier'}, inplace=True)
+    positions_history.rename(columns={'symbol': 'identifier'}, inplace=True)
 
     cash_history = portfolio_solved['cash'][['currency', 'percent_held', 'percent_target', 'percent_deviation']].copy()
     cash_history['type'] = 'cash'
@@ -33,6 +33,9 @@ def update_rebalance_history(portfolio_solved, rebalance_history, run):
     current_snapshot = pd.concat([positions_history, cash_history])
     current_snapshot['timestamp'] = datetime.now()
     current_snapshot = current_snapshot.assign(run=run)
+        
+    # Write the updated rebalance history to a CSV file
+    current_snapshot.to_csv('rebalance_history.csv', index=False)
     
     return pd.concat([rebalance_history, current_snapshot], ignore_index=True)
 
@@ -42,10 +45,7 @@ def plot_rebalance_progress(rebalance_history: pd.DataFrame) -> None:
     """Creates a terminal plot showing how positions track towards their targets."""
     # Get unique runs for x-axis
     runs = rebalance_history['run'].unique()
-    
-    # Replace NA with 0 and Inf with 100 in the percent_deviation column of rebalance_history
-    rebalance_history['percent_deviation'] = rebalance_history['percent_deviation'].fillna(0).replace([float('inf'), float('-inf')], 100)
-    
+        
     # Initialize plot
     fig = plotille.Figure()
     fig.width = 80
@@ -71,9 +71,10 @@ def run_rebalancer(account: str, model: str, port: int = 4003) -> None:
     """Main rebalancing loop."""
     run = 0
     out_of_band = True
+    no_change = False
     rebalance_history = pd.DataFrame()
 
-    while out_of_band:
+    while out_of_band and not no_change:
         run += 1
         print(f"Loading portfolio model from {model}")
         portfolio_model = get_portfolio_model(model, account=account, port=port)
@@ -88,12 +89,19 @@ def run_rebalancer(account: str, model: str, port: int = 4003) -> None:
         portfolio_priced = price_portfolio(portfolio_targets, account=account, port=port)
 
         print("Solving portfolio optimization")
-        portfolio_solved = solve_portfolio(portfolio_priced)
+        portfolio_solved = solve_portfolio(portfolio_priced, account = account, port = port, )
 
         print(f"\nPortfolio Positions:\n{portfolio_solved['positions']}")
         print(f"\nPortfolio Cash:\n{portfolio_solved['cash']}")
 
         rebalance_history = update_rebalance_history(portfolio_solved, rebalance_history, run)
+
+        # Check if the average percent deviation has changed in the last 5 runs
+        if run >= 5:
+            last_5_runs = rebalance_history[rebalance_history['run'] > run - 5]
+            avg_deviation_last_5 = last_5_runs.groupby('run')['percent_deviation'].mean()
+            if len(avg_deviation_last_5) == 5 and avg_deviation_last_5.nunique() == 1:
+                no_change = True
 
         buy_only = portfolio_model.get('buy_only', False)
 
@@ -102,7 +110,10 @@ def run_rebalancer(account: str, model: str, port: int = 4003) -> None:
             any(portfolio_solved['positions'].out_of_band)
         )
 
-        if out_of_band:
+        if no_change:
+            plot_rebalance_progress(rebalance_history)
+            print("Rebalancing operation has not changed portfolio weights in the last 5 runs. This is pointless. Exiting.") 
+        elif out_of_band:
             plot_rebalance_progress(rebalance_history)
             print("Portfolio is out of balance - executing trades")
             print("Calculating order constraints")
@@ -116,6 +127,9 @@ def run_rebalancer(account: str, model: str, port: int = 4003) -> None:
             print(f"\nOrders:\n{orders}\n")
     
             filled_orders = execute_orders(orders, account=account, port=port)
+
             print(f"\nFilled Orders:\n{filled_orders}\n")
+            
         else:
             print("Portfolio weights are within tolerance. Exiting") 
+        print(f"\nEnd of run #{str(run)} ----------------------------------\n")

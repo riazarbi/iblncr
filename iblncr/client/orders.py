@@ -105,10 +105,10 @@ def price_orders(order_quantities,
         print("No order quantities to price")
         return None
     
-    quotes = get_quotes(order_quantities.conid.tolist(), port=port, account=account)
+    quotes_unfiltered = get_quotes(order_quantities.conid.tolist(), port=port, account=account)
 
-    quotes = quotes[~quotes[['bid_price', 'ask_price', 'bid_size', 'ask_size']].isin([-1, 0]).any(axis=1)]
-    quotes = quotes.dropna(subset=['bid_price', 'ask_price', 'bid_size', 'ask_size'])
+    quotes_unfiltered = quotes_unfiltered[~quotes_unfiltered[['bid_price', 'ask_price', 'bid_size', 'ask_size']].isin([-1, 0]).any(axis=1)]
+    quotes = quotes_unfiltered.dropna(subset=['bid_price', 'ask_price', 'bid_size', 'ask_size'])
 
     # Create a new DataFrame instead of modifying a view
     if len(quotes) > 0:
@@ -123,7 +123,7 @@ def price_orders(order_quantities,
     
         return orders
     else:
-        print("No quotes found for orders quantities")
+        print("No quotes found for orders quantities.")
         return None
     
 
@@ -208,8 +208,9 @@ def get_filled_orders(port: int = 4003, account: str = None):
     ib_disconnect(ib)
     # Convert to DataFrame with relevant columns
     filled_orders = util.df(filled_trades)
-    if len(filled_orders) == 0:
-        print("No filled orders found")
+    if filled_orders is None:
+        return None
+    elif len(filled_orders) == 0:
         return None
     else:
         return filled_orders
