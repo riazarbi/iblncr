@@ -145,6 +145,11 @@ def submit_orders(orders, port: int = 4003, account: str = None):
     Returns:
         None
     """
+    
+    if orders['limit'].isna().any():
+        print("Dropping orders with NaN limits")
+        orders = orders.dropna(subset=['limit']).copy()
+    
     ib = ib_connect(port=port, account=account)
     contracts = [Stock(conId=i) for i in orders.conid.tolist()]
     all = ib.qualifyContracts(*contracts)    
@@ -161,6 +166,8 @@ def submit_orders(orders, port: int = 4003, account: str = None):
         submissions.append(trade)
         
     ib_disconnect(ib)
+
+    return(orders)
 
 
 def get_orders(port: int = 4003, account: str = None):
@@ -238,7 +245,7 @@ def execute_orders(orders: pd.DataFrame, account: str, port: int = 4003) -> Opti
         return None
 
     print("Submitting orders")
-    submit_orders(orders, account=account, port=port)     
+    submitted_orders = submit_orders(orders, account=account, port=port)
     
     print("Waiting 60 seconds before cancelling unfilled orders")
     time.sleep(60)
