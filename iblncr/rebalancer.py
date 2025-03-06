@@ -30,10 +30,11 @@ def update_rebalance_history(portfolio_solved, rebalance_history, run):
     current_snapshot['timestamp'] = datetime.now()
     current_snapshot = current_snapshot.assign(run=run)
         
+    history = pd.concat([rebalance_history, current_snapshot], ignore_index=True)
     # Write the updated rebalance history to a CSV file
-    current_snapshot.to_csv('rebalance_history.csv', index=False)
+    history.to_csv('rebalance_history.csv', index=False)
     
-    return pd.concat([rebalance_history, current_snapshot], ignore_index=True)
+    return history
 
 
 
@@ -44,12 +45,12 @@ def plot_rebalance_progress(rebalance_history: pd.DataFrame) -> None:
         
     # Initialize plot
     fig = plotille.Figure()
-    fig.width = 80
-    fig.height = 20
+    fig.width = 40
+    fig.height = 15
     fig.x_label = "Run" 
     fig.y_label = "Tracking Error %"
     fig.set_x_limits(min_=0, max_=int(max(runs)+1))
-    fig.set_y_limits(min_=0, max_=int(rebalance_history['percent_deviation'].max()+5))
+    fig.set_y_limits(min_=0, max_=int(rebalance_history['percent_deviation'].max()+1))
     
     # Plot each position/cash difference from target
     for identifier in rebalance_history['identifier'].unique():
@@ -101,11 +102,11 @@ def run_rebalancer(account: str, model: str, port: int = 4003) -> None:
 
         rebalance_history = update_rebalance_history(portfolio_solved, rebalance_history, run)
 
-        # Check if the average percent deviation has changed in the last 5 runs
-        if run >= 5:
-            last_5_runs = rebalance_history[rebalance_history['run'] > run - 5]
-            avg_deviation_last_5 = last_5_runs.groupby('run')['percent_deviation'].mean()
-            if len(avg_deviation_last_5) == 5 and avg_deviation_last_5.nunique() == 1:
+        # Check if the average percent deviation has changed in the last 10 runs
+        if run >= 10:
+            last_10_runs = rebalance_history[rebalance_history['run'] > run - 10]
+            avg_deviation_last_10 = last_10_runs.groupby('run')['percent_deviation'].mean()
+            if len(avg_deviation_last_10) == 10 and avg_deviation_last_10.nunique() == 1:
                 no_change = True
 
         buy_only = portfolio_model.get('buy_only', False)
@@ -115,12 +116,13 @@ def run_rebalancer(account: str, model: str, port: int = 4003) -> None:
             any(portfolio_solved['positions'].out_of_band)
         )
 
+        plot_rebalance_progress(rebalance_history)
+        
         if no_change:
-            plot_rebalance_progress(rebalance_history)
-            print("Rebalancing operation has not changed portfolio weights in the last 5 runs. This is pointless. Exiting.") 
+            print("Rebalancing operation has not changed portfolio weights in the last 10 runs. This is pointless. Exiting.") 
             print("... Perhaps you should log in to TWS and manually rebalance your portfolio?") 
         elif out_of_band:
-            plot_rebalance_progress(rebalance_history)
+            
             print("Portfolio is out of balance")
             print("Calculating order constraints")
 
